@@ -1,7 +1,7 @@
 const ja = {
   languageLabel: "言語",
-  appBadge: "充電シミュレーター",
-  appTitle: "USB-C & Lightning 充電シミュレーター",
+  appBadge: "Chaging Simulator",
+  appTitle: "Chaging Simulator",
   appSubtitle:
     "アダプター・ケーブル・デバイスを比較し、実際の充電出力、ボトルネック、80%までの時間を見積もります。",
   standardSelectionTitle: "規格の選択",

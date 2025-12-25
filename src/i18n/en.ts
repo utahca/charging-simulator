@@ -1,7 +1,7 @@
 const en = {
   languageLabel: "Language",
-  appBadge: "Charging Simulator",
-  appTitle: "USB-C & Lightning Charging Simulator",
+  appBadge: "Chaging Simulator",
+  appTitle: "Chaging Simulator",
   appSubtitle:
     "Compare adapters, cables, and devices to estimate real-world charging power, bottlenecks, and time to 80%.",
   standardSelectionTitle: "Standard selection",

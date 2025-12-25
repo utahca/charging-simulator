@@ -14,6 +14,8 @@ export type CableConnector =
   | "USB-A to Lightning";
 export type DeviceConnector = "USB-C" | "Lightning";
 
+export type MessageKey = keyof typeof import("./i18n/en").default;
+
 export interface AdapterSpec {
   name: string;
   maxW: number;
@@ -45,6 +47,11 @@ export interface DeviceSpec {
   notes?: string;
 }
 
+export type MessageDescriptor = {
+  key: MessageKey;
+  values?: Record<string, number | string>;
+};
+
 export interface SimulationResult {
   standard: Standard;
   estimatedW: number;
@@ -52,7 +59,7 @@ export interface SimulationResult {
   estimatedA: number;
   meetsRecommended: boolean;
   estimatedTimeHours: number;
-  bottlenecks: string[];
-  nextActions: string[];
-  incompatibilities: string[];
+  bottlenecks: MessageDescriptor[];
+  nextActions: MessageDescriptor[];
+  incompatibilities: MessageDescriptor[];
 }

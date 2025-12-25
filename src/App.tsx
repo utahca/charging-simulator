@@ -10,8 +10,17 @@ import {
   Switch,
 } from "./components/ui";
 import { ADAPTERS, CABLES, DEVICES, STANDARDS } from "./data/presets";
-import type { AdapterSpec, CableSpec, DeviceSpec, SimulationResult, Standard } from "./types";
+import type {
+  AdapterSpec,
+  CableSpec,
+  DeviceSpec,
+  MessageDescriptor,
+  SimulationResult,
+  Standard,
+} from "./types";
 import { BatteryCharging, Bolt, PlugZap, Zap } from "lucide-react";
+import en from "./i18n/en";
+import ja from "./i18n/ja";
 
 const STANDARD_PRIORITY: Standard[] = [
   "USB PD 3.1 EPR",
@@ -26,30 +35,44 @@ type StandardSelection = "Auto" | Standard;
 
 type StandardCompatibility = {
   compatible: boolean;
-  reasons: string[];
+  reasons: MessageDescriptor[];
 };
+
+type Language = "en" | "ja";
+type MessageKey = keyof typeof en;
+const translations = { en, ja } satisfies Record<Language, Record<MessageKey, string>>;
+
+const formatMessage = (template: string, values?: Record<string, number | string>) => {
+  if (!values) return template;
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match
+  );
+};
+
+const createTranslator = (language: Language) => (key: MessageKey, values?: MessageDescriptor["values"]) =>
+  formatMessage(translations[language][key], values);
 
 const getConnectorCompatibility = (
   adapter: AdapterSpec,
   cable: CableSpec,
   device: DeviceSpec
 ): StandardCompatibility => {
-  const reasons: string[] = [];
+  const reasons: MessageDescriptor[] = [];
   const requiresUsbC = cable.connector.includes("USB-C");
   const requiresUsbA = cable.connector.includes("USB-A");
 
   if (requiresUsbC && !adapter.ports.includes("USB-C")) {
-    reasons.push("Adapter lacks USB-C port for this cable.");
+    reasons.push({ key: "adapterLacksUsbC" });
   }
   if (requiresUsbA && !adapter.ports.includes("USB-A")) {
-    reasons.push("Adapter lacks USB-A port for this cable.");
+    reasons.push({ key: "adapterLacksUsbA" });
   }
 
   if (device.connector === "USB-C" && !cable.connector.includes("USB-C")) {
-    reasons.push("Device needs USB-C but cable ends with Lightning.");
+    reasons.push({ key: "deviceNeedsUsbC" });
   }
   if (device.connector === "Lightning" && !cable.connector.includes("Lightning")) {
-    reasons.push("Device needs Lightning but cable is USB-C only.");
+    reasons.push({ key: "deviceNeedsLightning" });
   }
 
   return { compatible: reasons.length === 0, reasons };
@@ -64,30 +87,30 @@ const isStandardCompatible = (
   cable: CableSpec,
   device: DeviceSpec
 ): StandardCompatibility => {
-  const reasons: string[] = [];
+  const reasons: MessageDescriptor[] = [];
   const connectorCompatibility = getConnectorCompatibility(adapter, cable, device);
   if (!connectorCompatibility.compatible) {
     reasons.push(...connectorCompatibility.reasons);
   }
 
   if (!adapter.standards.includes(standard)) {
-    reasons.push("Adapter does not support the selected standard.");
+    reasons.push({ key: "adapterNoStandard" });
   }
   if (!device.standards.includes(standard)) {
-    reasons.push("Device does not support the selected standard.");
+    reasons.push({ key: "deviceNoStandard" });
   }
 
   const usesUsbA = cable.connector.includes("USB-A");
   if (usesUsbA && !isStandardAllowedOnUsbA(standard)) {
-    reasons.push("USB-A cables cannot negotiate USB Power Delivery.");
+    reasons.push({ key: "usbACableNoPd" });
   }
 
   if (standard === "USB PD 3.1 EPR" && !cable.epr) {
-    reasons.push("EPR requires a 48V/5A (240W) USB-C cable.");
+    reasons.push({ key: "eprRequiresCable" });
   }
 
   if (standard === "USB PD 3.1 EPR" && Math.min(adapter.maxV, device.maxV) < 28) {
-    reasons.push("EPR needs 28V+ capability on adapter and device.");
+    reasons.push({ key: "eprRequiresVoltage" });
   }
 
   return { compatible: reasons.length === 0, reasons };
@@ -126,39 +149,38 @@ const estimateCharging = (
   const taperFactor = effectiveW >= device.recommendedW ? 1.15 : effectiveW < 15 ? 1.4 : 1.3;
   const estimatedTimeHours = effectiveW > 0 ? (energyNeededWh / effectiveW) * taperFactor : 0;
 
-  const bottlenecks: string[] = [];
+  const bottlenecks: MessageDescriptor[] = [];
   if (adapter.maxW < device.recommendedW) {
-    bottlenecks.push(`Adapter caps at ${adapter.maxW}W.`);
+    bottlenecks.push({ key: "bottleneckAdapterCaps", values: { maxW: adapter.maxW } });
   }
   if (cable.maxW < device.recommendedW) {
-    bottlenecks.push(`Cable caps at ${cable.maxW}W.`);
+    bottlenecks.push({ key: "bottleneckCableCaps", values: { maxW: cable.maxW } });
   }
   if (deviceMaxW < device.recommendedW) {
-    bottlenecks.push("Device charging curve limits intake.");
+    bottlenecks.push({ key: "bottleneckDeviceCurve" });
   }
   if (standard === "USB PD 3.1 EPR" && !cable.epr) {
-    bottlenecks.push("EPR standard selected but cable is not EPR-rated.");
+    bottlenecks.push({ key: "bottleneckEprCable" });
   }
   if (usesUsbA && !isStandardAllowedOnUsbA(standard)) {
-    bottlenecks.push("USB-A path prevents USB PD negotiation.");
+    bottlenecks.push({ key: "bottleneckUsbAPd" });
   }
 
-  const nextActions: string[] = [];
+  const nextActions: MessageDescriptor[] = [];
   if (adapter.maxW < device.recommendedW) {
-    nextActions.push("Upgrade the adapter to match the device recommended wattage.");
+    nextActions.push({ key: "actionUpgradeAdapter" });
   }
   if (cable.maxW < device.recommendedW) {
-    nextActions.push("Use a higher-rated cable (5A or 240W EPR)."
-    );
+    nextActions.push({ key: "actionHigherRatedCable" });
   }
   if (standard === "USB PD 3.1 EPR" && !cable.epr) {
-    nextActions.push("Use a USB-C EPR 240W cable for 28V+ charging.");
+    nextActions.push({ key: "actionUseEprCable" });
   }
   if (usesUsbA) {
-    nextActions.push("Switch to a USB-C adapter and cable to unlock PD/PPS.");
+    nextActions.push({ key: "actionSwitchUsbC" });
   }
   if (!meetsRecommended) {
-    nextActions.push("Lower expectations: device will charge slower than advertised.");
+    nextActions.push({ key: "actionLowerExpectations" });
   }
 
   return {
@@ -195,15 +217,16 @@ const runSanityTests = () => {
   console.assert(test3.estimatedW <= 15, "Test3: USB-A to Lightning Apple 2.4A should be <= 15W");
 };
 
-const formatTime = (hours: number) => {
-  if (hours <= 0) return "N/A";
+const formatTime = (hours: number, t: ReturnType<typeof createTranslator>) => {
+  if (hours <= 0) return t("notAvailable");
   const totalMinutes = Math.round(hours * 60);
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  return `${hrs}h ${mins}m`;
+  return t("timeFormat", { hrs, mins });
 };
 
 export default function App() {
+  const [language, setLanguage] = useState<Language>("en");
   const [adapterIndex, setAdapterIndex] = useState(0);
   const [cableIndex, setCableIndex] = useState(0);
   const [deviceIndex, setDeviceIndex] = useState(0);
@@ -234,6 +257,7 @@ export default function App() {
     () => estimateCharging(adapterState, cableState, deviceState, standardSelection),
     [adapterState, cableState, deviceState, standardSelection]
   );
+  const t = useMemo(() => createTranslator(language), [language]);
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -241,15 +265,21 @@ export default function App() {
         <header className="flex flex-col gap-4 text-center">
           <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs font-semibold uppercase text-slate-300">
             <Bolt className="h-4 w-4 text-sky-400" />
-            Charging Simulator
+            {t("appBadge")}
           </div>
           <h1 className="text-3xl font-bold text-white md:text-4xl">
-            USB-C &amp; Lightning Charging Simulator
+            {t("appTitle")}
           </h1>
           <p className="text-sm text-slate-400 md:text-base">
-            Compare adapters, cables, and devices to estimate real-world charging power,
-            bottlenecks, and time to 80%.
+            {t("appSubtitle")}
           </p>
+          <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-xs text-slate-300">
+            <Label className="text-xs font-medium text-slate-300">{t("languageLabel")}</Label>
+            <Select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </Select>
+          </div>
         </header>
 
         <Card>
@@ -257,8 +287,8 @@ export default function App() {
             <div className="flex items-center gap-3">
               <PlugZap className="h-6 w-6 text-emerald-400" />
               <div>
-                <p className="text-sm font-semibold text-slate-200">Standard selection</p>
-                <p className="text-xs text-slate-400">Auto picks the best mutually supported standard.</p>
+                <p className="text-sm font-semibold text-slate-200">{t("standardSelectionTitle")}</p>
+                <p className="text-xs text-slate-400">{t("standardSelectionSubtitle")}</p>
               </div>
             </div>
             <div className="flex w-full flex-col gap-3 md:w-72">
@@ -266,7 +296,7 @@ export default function App() {
                 value={standardSelection}
                 onChange={(event) => setStandardSelection(event.target.value as StandardSelection)}
               >
-                <option value="Auto">Auto (recommended)</option>
+                <option value="Auto">{t("standardAutoRecommended")}</option>
                 {STANDARDS.map((standard) => (
                   <option key={standard} value={standard}>
                     {standard}
@@ -282,11 +312,11 @@ export default function App() {
             <Card>
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-200">
                 <Zap className="h-4 w-4 text-sky-400" />
-                Power Adapter
+                {t("powerAdapter")}
               </div>
               <div className="space-y-3">
                 <div>
-                  <Label>Preset</Label>
+                  <Label>{t("preset")}</Label>
                   <Select value={adapterIndex} onChange={(event) => setAdapterIndex(Number(event.target.value))}>
                     {ADAPTERS.map((adapter, index) => (
                       <option key={adapter.name} value={index}>
@@ -300,7 +330,7 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label>Max W</Label>
+                    <Label>{t("maxW")}</Label>
                     <Input
                       type="number"
                       value={adapterState.maxW}
@@ -310,7 +340,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Max V</Label>
+                    <Label>{t("maxV")}</Label>
                     <Input
                       type="number"
                       value={adapterState.maxV}
@@ -320,7 +350,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Max A</Label>
+                    <Label>{t("maxA")}</Label>
                     <Input
                       type="number"
                       value={adapterState.maxA}
@@ -336,7 +366,7 @@ export default function App() {
                   ))}
                 </div>
                 <div className="text-xs text-slate-400">
-                  Ports: {adapterState.ports.join(", ")}
+                  {t("ports", { ports: adapterState.ports.join(", ") })}
                 </div>
               </div>
             </Card>
@@ -346,11 +376,11 @@ export default function App() {
             <Card>
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-200">
                 <BatteryCharging className="h-4 w-4 text-emerald-400" />
-                Charging Cable
+                {t("chargingCable")}
               </div>
               <div className="space-y-3">
                 <div>
-                  <Label>Preset</Label>
+                  <Label>{t("preset")}</Label>
                   <Select value={cableIndex} onChange={(event) => setCableIndex(Number(event.target.value))}>
                     {CABLES.map((cable, index) => (
                       <option key={cable.name} value={index}>
@@ -364,7 +394,7 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label>Max W</Label>
+                    <Label>{t("maxW")}</Label>
                     <Input
                       type="number"
                       value={cableState.maxW}
@@ -374,7 +404,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Max V</Label>
+                    <Label>{t("maxV")}</Label>
                     <Input
                       type="number"
                       value={cableState.maxV}
@@ -384,7 +414,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Max A</Label>
+                    <Label>{t("maxA")}</Label>
                     <Input
                       type="number"
                       value={cableState.maxA}
@@ -395,8 +425,8 @@ export default function App() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Connector: {cableState.connector}</span>
-                  <span>{cableState.epr ? "EPR cable" : "SPR cable"}</span>
+                  <span>{t("connector", { connector: cableState.connector })}</span>
+                  <span>{cableState.epr ? t("eprCable") : t("sprCable")}</span>
                 </div>
               </div>
             </Card>
@@ -406,11 +436,11 @@ export default function App() {
             <Card>
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-200">
                 <PlugZap className="h-4 w-4 text-purple-400" />
-                Device
+                {t("device")}
               </div>
               <div className="space-y-3">
                 <div>
-                  <Label>Preset</Label>
+                  <Label>{t("preset")}</Label>
                   <Select value={deviceIndex} onChange={(event) => setDeviceIndex(Number(event.target.value))}>
                     {DEVICES.map((device, index) => (
                       <option key={device.name} value={index}>
@@ -424,7 +454,7 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Recommended W</Label>
+                    <Label>{t("recommendedW")}</Label>
                     <Input
                       type="number"
                       value={deviceState.recommendedW}
@@ -434,7 +464,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Battery (Wh)</Label>
+                    <Label>{t("batteryWh")}</Label>
                     <Input
                       type="number"
                       value={deviceState.batteryWh}
@@ -446,7 +476,7 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Max V</Label>
+                    <Label>{t("maxV")}</Label>
                     <Input
                       type="number"
                       value={deviceState.maxV}
@@ -456,7 +486,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <Label>Max A</Label>
+                    <Label>{t("maxA")}</Label>
                     <Input
                       type="number"
                       value={deviceState.maxA}
@@ -471,7 +501,9 @@ export default function App() {
                     <Badge key={standard}>{standard}</Badge>
                   ))}
                 </div>
-                <div className="text-xs text-slate-400">Connector: {deviceState.connector}</div>
+                <div className="text-xs text-slate-400">
+                  {t("connector", { connector: deviceState.connector })}
+                </div>
               </div>
             </Card>
           </motion.div>
@@ -481,65 +513,63 @@ export default function App() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-white">Simulation Results</h2>
-                <p className="text-xs text-slate-400">
-                  Based on adapter, cable, device, and standard selection.
-                </p>
+                <h2 className="text-xl font-semibold text-white">{t("simulationResults")}</h2>
+                <p className="text-xs text-slate-400">{t("simulationSubtitle")}</p>
               </div>
               <div className="flex items-center gap-3">
-                <Label>Show notes</Label>
+                <Label>{t("showNotes")}</Label>
                 <Switch checked={showNotes} onChange={setShowNotes} />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                <p className="text-xs text-slate-400">Selected standard</p>
+                <p className="text-xs text-slate-400">{t("selectedStandard")}</p>
                 <p className="mt-2 text-sm font-semibold text-slate-100">{simulation.standard}</p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                <p className="text-xs text-slate-400">Estimated max power</p>
+                <p className="text-xs text-slate-400">{t("estimatedMaxPower")}</p>
                 <p className="mt-2 text-2xl font-semibold text-white">{simulation.estimatedW} W</p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                <p className="text-xs text-slate-400">Voltage / Current</p>
+                <p className="text-xs text-slate-400">{t("voltageCurrent")}</p>
                 <p className="mt-2 text-lg font-semibold text-white">
                   {simulation.estimatedV} V · {simulation.estimatedA} A
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                <p className="text-xs text-slate-400">20% → 80% estimate</p>
+                <p className="text-xs text-slate-400">{t("estimateTime")}</p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {formatTime(simulation.estimatedTimeHours)}
+                  {formatTime(simulation.estimatedTimeHours, t)}
                 </p>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">Recommended power</p>
+                <p className="text-xs font-semibold uppercase text-slate-400">{t("recommendedPower")}</p>
                 <p className="mt-2 text-sm text-slate-200">
                   {simulation.meetsRecommended ? (
-                    <span className="text-emerald-400">Meets device recommended wattage</span>
+                    <span className="text-emerald-400">{t("meetsRecommended")}</span>
                   ) : (
-                    <span className="text-amber-300">Below device recommended wattage</span>
+                    <span className="text-amber-300">{t("belowRecommended")}</span>
                   )}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">Bottlenecks</p>
+                <p className="text-xs font-semibold uppercase text-slate-400">{t("bottlenecks")}</p>
                 <ul className="mt-2 space-y-1 text-xs text-slate-300">
-                  {simulation.bottlenecks.length === 0 && <li>No major bottlenecks detected.</li>}
-                  {simulation.bottlenecks.map((item) => (
-                    <li key={item}>• {item}</li>
+                  {simulation.bottlenecks.length === 0 && <li>{t("noBottlenecks")}</li>}
+                  {simulation.bottlenecks.map((item, index) => (
+                    <li key={`${item.key}-${index}`}>• {t(item.key, item.values)}</li>
                   ))}
                 </ul>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">Next actions</p>
+                <p className="text-xs font-semibold uppercase text-slate-400">{t("nextActions")}</p>
                 <ul className="mt-2 space-y-1 text-xs text-slate-300">
-                  {simulation.nextActions.length === 0 && <li>Everything looks optimal.</li>}
-                  {simulation.nextActions.map((item) => (
-                    <li key={item}>• {item}</li>
+                  {simulation.nextActions.length === 0 && <li>{t("everythingOptimal")}</li>}
+                  {simulation.nextActions.map((item, index) => (
+                    <li key={`${item.key}-${index}`}>• {t(item.key, item.values)}</li>
                   ))}
                 </ul>
               </div>
@@ -547,10 +577,10 @@ export default function App() {
 
             {simulation.incompatibilities.length > 0 && (
               <Alert>
-                <p className="font-semibold">Incompatibilities detected:</p>
+                <p className="font-semibold">{t("incompatibilitiesDetected")}</p>
                 <ul className="mt-2 space-y-1">
-                  {simulation.incompatibilities.map((item) => (
-                    <li key={item}>• {item}</li>
+                  {simulation.incompatibilities.map((item, index) => (
+                    <li key={`${item.key}-${index}`}>• {t(item.key, item.values)}</li>
                   ))}
                 </ul>
               </Alert>

@@ -1,6 +1,17 @@
 import React, { useMemo, useState } from "react";
 import { Info, RefreshCcw, Zap, AlertTriangle, Sparkles, Settings2 } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  ADAPTERS,
+  ALL_STANDARDS,
+  CABLES,
+  DEVICES,
+  STANDARD_PRIORITY,
+  type AdapterSpec,
+  type CableSpec,
+  type DeviceSpec,
+  type Standard,
+} from "./data/presets";
 
 /**
  * Charging Simulator – USB/PD/PPS
@@ -28,6 +39,16 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const { className = "", ...rest } = props;
   return (
     <input
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 ${className}`}
+      {...rest}
+    />
+  );
+}
+
+function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const { className = "", ...rest } = props;
+  return (
+    <textarea
       className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 ${className}`}
       {...rest}
     />
@@ -182,335 +203,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// ---------- Types
-
-type Standard =
-  | "USB PD 3.1 EPR"
-  | "USB PD 3.0/2.0"
-  | "USB PD PPS"
-  | "Quick Charge 4+"
-  | "Quick Charge 3.0"
-  | "Apple 2.4A"
-  | "USB BC 1.2";
-
-interface AdapterSpec {
-  name: string;
-  maxW: number;
-  maxV: number;
-  maxA?: number;
-  standards: Standard[];
-  notes?: string;
-}
-
-interface CableSpec {
-  name: string;
-  connector: "USB-C to USB-C" | "USB-A to USB-C" | "USB-A to Lightning" | "USB-C to Lightning";
-  maxA: number;
-  maxV: number;
-  eMarked?: boolean;
-  usbVersion?: string;
-  notes?: string;
-}
-
-interface DeviceSpec {
-  name: string;
-  recommendedW: number;
-  maxW: number;
-  maxV: number;
-  maxA?: number;
-  batteryWh?: number;
-  batteryMAh?: number;
-  nominalV?: number;
-  standards: Standard[];
-  notes?: string;
-}
-
-// ---------- Presets
-
-const ADAPTERS: AdapterSpec[] = [
-  {
-    name: "Apple 20W USB‑C Power Adapter",
-    maxW: 20,
-    maxV: 9,
-    standards: ["USB PD 3.0/2.0", "Apple 2.4A"],
-    notes: "iPhone系の定番。PPS非対応",
-  },
-  {
-    name: "Apple 35W Dual USB‑C Adapter",
-    maxW: 35,
-    maxV: 20,
-    standards: ["USB PD 3.0/2.0"],
-  },
-  {
-    name: "Anker 737 (GaNPrime) 120W",
-    maxW: 120,
-    maxV: 20,
-    standards: ["USB PD 3.0/2.0", "USB PD PPS", "Quick Charge 4+"],
-    notes: "複数ポートのため単ポート利用時の上限に注意",
-  },
-  {
-    name: "Anker 715 (Nano II) 65W",
-    maxW: 65,
-    maxV: 20,
-    standards: ["USB PD 3.0/2.0", "Quick Charge 4+"],
-  },
-  {
-    name: "UGREEN 300W (PD 3.1 EPR)",
-    maxW: 300,
-    maxV: 48,
-    standards: ["USB PD 3.1 EPR", "USB PD 3.0/2.0"],
-  },
-  {
-    name: "Nintendo Switch OEM Adapter",
-    maxW: 39,
-    maxV: 15,
-    standards: ["USB PD 3.0/2.0"],
-  },
-  // ユーザー提供
-  {
-    name: "Apple 140W USB-C Power Adapter",
-    maxW: 140,
-    maxV: 28,
-    standards: ["USB PD 3.1 EPR", "USB PD 3.0/2.0"],
-    notes: "PD 3.1対応 / MacBook Pro 16向け",
-  },
-  {
-    name: "Anker 737 Charger (GaNPrime 120W)",
-    maxW: 100,
-    maxV: 20,
-    maxA: 5,
-    standards: ["USB PD 3.0/2.0", "USB PD PPS", "Quick Charge 3.0", "Apple 2.4A"],
-    notes: "3ポート合計120W / 単ポート最大100W (PPS対応)",
-  },
-  {
-    name: "Belkin BoostCharge Pro 4-Port GaN Charger 108W",
-    maxW: 96,
-    maxV: 20,
-    standards: ["USB PD 3.0/2.0", "Apple 2.4A"],
-    notes: "4ポート合計108W / 単Cポート最大96W",
-  },
-  {
-    name: "Samsung 45W USB-C Charger (Super Fast Charging 2.0)",
-    maxW: 45,
-    maxV: 21,
-    standards: ["USB PD PPS", "USB PD 3.0/2.0"],
-    notes: "PD PPS対応 / Galaxyの45W急速充電用",
-  },
-  {
-    name: "Anker 715 Charger (Nano II 65W)",
-    maxW: 65,
-    maxV: 20,
-    standards: ["USB PD PPS", "USB PD 3.0/2.0", "Apple 2.4A"],
-    notes: "単ポート最大65W (PPS対応)",
-  },
-];
-
-const CABLES: CableSpec[] = [
-  {
-    name: "USB‑C to USB‑C 3A / 60W (no eMarker)",
-    connector: "USB-C to USB-C",
-    maxA: 3,
-    maxV: 20,
-    eMarked: false,
-    usbVersion: "USB 2.0",
-    notes: "一般的なC-Cケーブル。上限60W",
-  },
-  {
-    name: "USB‑C to USB‑C 5A / 100W (eMarked)",
-    connector: "USB-C to USB-C",
-    maxA: 5,
-    maxV: 20,
-    eMarked: true,
-    usbVersion: "USB 3.2",
-  },
-  {
-    name: "USB‑C to USB‑C 5A / 240W (EPR)",
-    connector: "USB-C to USB-C",
-    maxA: 5,
-    maxV: 48,
-    eMarked: true,
-    usbVersion: "USB 4 / EPR",
-  },
-  {
-    name: "USB‑A to USB‑C (legacy)",
-    connector: "USB-A to USB-C",
-    maxA: 2.4,
-    maxV: 5,
-    eMarked: false,
-    usbVersion: "USB 2.0",
-    notes: "最大12W〜15W程度",
-  },
-  {
-    name: "USB‑C to Lightning (Apple MFi)",
-    connector: "USB-C to Lightning",
-    maxA: 3,
-    maxV: 9,
-    eMarked: false,
-    usbVersion: "USB 2.0",
-  },
-  // ユーザー提供
-  {
-    name: "Baseus 240W USB-C to USB-C (EPR)",
-    connector: "USB-C to USB-C",
-    maxA: 5,
-    maxV: 48,
-    eMarked: true,
-    usbVersion: "USB 4",
-    notes: "PD 3.1 EPR対応",
-  },
-  {
-    name: "Apple 240W USB-C Charge Cable (2 m)",
-    connector: "USB-C to USB-C",
-    maxA: 5,
-    maxV: 48,
-    eMarked: true,
-    usbVersion: "USB 2.0",
-    notes: "PD 3.1 EPR対応 / 編組タイプ",
-  },
-  {
-    name: "Apple USB-C to Lightning Cable (1 m)",
-    connector: "USB-C to Lightning",
-    maxA: 3,
-    maxV: 20,
-    usbVersion: "USB 2.0",
-    notes: "MFi認証 / PD急速充電対応",
-  },
-  {
-    name: "Apple USB-A to Lightning Cable (1 m)",
-    connector: "USB-A to Lightning",
-    maxA: 2.4,
-    maxV: 5,
-    usbVersion: "USB 2.0",
-    notes: "Apple 5V2.4A (12W)充電対応",
-  },
-  {
-    name: "Anker PowerLine+ USB-A to USB-C Cable",
-    connector: "USB-A to USB-C",
-    maxA: 3,
-    maxV: 5,
-    usbVersion: "USB 3.0",
-    notes: "最大5V3A充電対応 / USB 3.0データ対応",
-  },
-];
-
-const DEVICES: DeviceSpec[] = [
-  {
-    name: "iPhone 15 Pro",
-    recommendedW: 27,
-    maxW: 30,
-    maxV: 9,
-    maxA: 3,
-    batteryMAh: 3274,
-    nominalV: 3.85,
-    standards: ["USB PD 3.0/2.0", "USB PD PPS", "Apple 2.4A", "USB BC 1.2"],
-    notes: "ピーク約27W程度と言われる",
-  },
-  {
-    name: "iPad Pro 11 (M4)",
-    recommendedW: 35,
-    maxW: 45,
-    maxV: 15,
-    maxA: 3,
-    batteryWh: 31,
-    standards: ["USB PD 3.0/2.0", "USB PD PPS"],
-  },
-  {
-    name: "MacBook Air 13 (M2/M3)",
-    recommendedW: 35,
-    maxW: 45,
-    maxV: 20,
-    maxA: 2.25,
-    batteryWh: 52,
-    standards: ["USB PD 3.0/2.0"],
-  },
-  {
-    name: "MacBook Pro 14 (M3)",
-    recommendedW: 70,
-    maxW: 96,
-    maxV: 20,
-    maxA: 5,
-    batteryWh: 70,
-    standards: ["USB PD 3.1 EPR", "USB PD 3.0/2.0"],
-  },
-  {
-    name: "Nintendo Switch",
-    recommendedW: 18,
-    maxW: 39,
-    maxV: 15,
-    maxA: 2.6,
-    batteryWh: 16,
-    standards: ["USB PD 3.0/2.0"],
-  },
-  {
-    name: "Pixel 8 Pro",
-    recommendedW: 30,
-    maxW: 30,
-    maxV: 11,
-    maxA: 3,
-    batteryMAh: 5050,
-    nominalV: 3.87,
-    standards: ["USB PD 3.0/2.0", "USB PD PPS", "Quick Charge 4+", "USB BC 1.2"],
-  },
-  // ユーザー提供
-  {
-    name: "Samsung Galaxy S24 Ultra",
-    recommendedW: 45,
-    maxW: 45,
-    maxV: 11,
-    maxA: 5,
-    batteryMAh: 5000,
-    nominalV: 3.85,
-    standards: ["USB PD PPS", "USB PD 3.0/2.0", "Quick Charge 4+"],
-    notes: "Super Fast Charging 2.0対応",
-  },
-  {
-    name: "Google Pixel 8 Pro",
-    recommendedW: 30,
-    maxW: 30,
-    maxV: 11,
-    maxA: 3,
-    batteryMAh: 5050,
-    nominalV: 3.85,
-    standards: ["USB PD PPS", "USB PD 3.0/2.0", "Quick Charge 3.0"],
-    notes: "30W PD急速充電対応 (PPS)",
-  },
-  {
-    name: "Steam Deck OLED",
-    recommendedW: 45,
-    maxW: 45,
-    maxV: 15,
-    maxA: 3,
-    batteryWh: 50.1,
-    batteryMAh: 6470,
-    nominalV: 7.74,
-    standards: ["USB PD 3.0/2.0", "USB BC 1.2"],
-    notes: "付属45W(15V/3A) PD充電器で急速充電",
-  },
-  {
-    name: "MacBook Pro 16 (M3 Max)",
-    recommendedW: 140,
-    maxW: 140,
-    maxV: 28,
-    maxA: 5,
-    batteryWh: 100,
-    batteryMAh: 8700,
-    nominalV: 11.4,
-    standards: ["USB PD 3.1 EPR", "USB PD 3.0/2.0"],
-    notes: "PD 3.1(28V/5A)による140W充電対応",
-  },
-];
-
 // ---------- Helpers
-
-const ALL_STANDARDS: Standard[] = [
-  "USB PD 3.1 EPR",
-  "USB PD 3.0/2.0",
-  "USB PD PPS",
-  "Quick Charge 4+",
-  "Quick Charge 3.0",
-  "Apple 2.4A",
-  "USB BC 1.2",
-];
 
 function intersect<T>(a: T[], b: T[]): T[] {
   return a.filter((x) => b.includes(x));
@@ -519,16 +212,6 @@ function intersect<T>(a: T[], b: T[]): T[] {
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
-
-const STANDARD_PRIORITY: Standard[] = [
-  "USB PD 3.1 EPR",
-  "USB PD 3.0/2.0",
-  "USB PD PPS",
-  "Quick Charge 4+",
-  "Quick Charge 3.0",
-  "Apple 2.4A",
-  "USB BC 1.2",
-];
 
 function chooseBestStandard(options: Standard[]): Standard | null {
   for (const s of STANDARD_PRIORITY) {
@@ -614,6 +297,174 @@ function formatMinutes(min: number | null) {
   return `${h}時間 ${m}分`;
 }
 
+// ---------- Preset import helpers
+
+const VALID_CONNECTORS: CableSpec["connector"][] = [
+  "USB-C to USB-C",
+  "USB-A to USB-C",
+  "USB-A to Lightning",
+  "USB-C to Lightning",
+];
+
+type PresetPayload = {
+  adapters: AdapterSpec[];
+  cables: CableSpec[];
+  devices: DeviceSpec[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function readStandards(value: unknown, path: string): Standard[] | string {
+  if (!Array.isArray(value)) return `${path} は配列で指定してください`;
+  const standards: Standard[] = [];
+  for (const entry of value) {
+    if (!isString(entry) || !ALL_STANDARDS.includes(entry as Standard)) {
+      return `${path} に不正な規格が含まれています`;
+    }
+    standards.push(entry as Standard);
+  }
+  if (standards.length === 0) return `${path} は1件以上指定してください`;
+  return standards;
+}
+
+function readOptionalNumber(value: unknown, path: string): number | undefined | string {
+  if (value === undefined) return undefined;
+  if (value === null) return `${path} は数値または省略で指定してください`;
+  if (!isNumber(value)) return `${path} は数値で指定してください`;
+  return value;
+}
+
+function parsePresetPayload(raw: string): { data: PresetPayload | null; error: string | null } {
+  if (!raw.trim()) {
+    return { data: null, error: "JSONが空です。プリセット情報を貼り付けてください。" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return { data: null, error: "JSONの構文が正しくありません。" };
+  }
+
+  if (!isRecord(parsed)) {
+    return { data: null, error: "JSONはオブジェクト形式で指定してください。" };
+  }
+
+  const adaptersRaw = parsed.adapters ?? [];
+  const cablesRaw = parsed.cables ?? [];
+  const devicesRaw = parsed.devices ?? [];
+
+  if (!Array.isArray(adaptersRaw)) return { data: null, error: "adapters は配列で指定してください。" };
+  if (!Array.isArray(cablesRaw)) return { data: null, error: "cables は配列で指定してください。" };
+  if (!Array.isArray(devicesRaw)) return { data: null, error: "devices は配列で指定してください。" };
+
+  const adapters: AdapterSpec[] = [];
+  for (const [index, entry] of adaptersRaw.entries()) {
+    if (!isRecord(entry)) return { data: null, error: `adapters[${index}] はオブジェクトで指定してください。` };
+    if (!isString(entry.name) || !entry.name.trim())
+      return { data: null, error: `adapters[${index}].name は文字列で指定してください。` };
+    if (!isNumber(entry.maxW)) return { data: null, error: `adapters[${index}].maxW は数値で指定してください。` };
+    if (!isNumber(entry.maxV)) return { data: null, error: `adapters[${index}].maxV は数値で指定してください。` };
+
+    const standards = readStandards(entry.standards, `adapters[${index}].standards`);
+    if (typeof standards === "string") return { data: null, error: standards };
+
+    const maxA = readOptionalNumber(entry.maxA, `adapters[${index}].maxA`);
+    if (typeof maxA === "string") return { data: null, error: maxA };
+
+    if (entry.notes !== undefined && !isString(entry.notes))
+      return { data: null, error: `adapters[${index}].notes は文字列で指定してください。` };
+
+    adapters.push({
+      name: entry.name.trim(),
+      maxW: entry.maxW,
+      maxV: entry.maxV,
+      maxA,
+      standards,
+      notes: entry.notes,
+    });
+  }
+
+  const cables: CableSpec[] = [];
+  for (const [index, entry] of cablesRaw.entries()) {
+    if (!isRecord(entry)) return { data: null, error: `cables[${index}] はオブジェクトで指定してください。` };
+    if (!isString(entry.name) || !entry.name.trim())
+      return { data: null, error: `cables[${index}].name は文字列で指定してください。` };
+    if (!isString(entry.connector) || !VALID_CONNECTORS.includes(entry.connector as CableSpec["connector"]))
+      return { data: null, error: `cables[${index}].connector は既定の値から選択してください。` };
+    if (!isNumber(entry.maxA)) return { data: null, error: `cables[${index}].maxA は数値で指定してください。` };
+    if (!isNumber(entry.maxV)) return { data: null, error: `cables[${index}].maxV は数値で指定してください。` };
+
+    if (entry.eMarked !== undefined && typeof entry.eMarked !== "boolean")
+      return { data: null, error: `cables[${index}].eMarked はtrue/falseで指定してください。` };
+    if (entry.usbVersion !== undefined && !isString(entry.usbVersion))
+      return { data: null, error: `cables[${index}].usbVersion は文字列で指定してください。` };
+    if (entry.notes !== undefined && !isString(entry.notes))
+      return { data: null, error: `cables[${index}].notes は文字列で指定してください。` };
+
+    cables.push({
+      name: entry.name.trim(),
+      connector: entry.connector as CableSpec["connector"],
+      maxA: entry.maxA,
+      maxV: entry.maxV,
+      eMarked: entry.eMarked,
+      usbVersion: entry.usbVersion,
+      notes: entry.notes,
+    });
+  }
+
+  const devices: DeviceSpec[] = [];
+  for (const [index, entry] of devicesRaw.entries()) {
+    if (!isRecord(entry)) return { data: null, error: `devices[${index}] はオブジェクトで指定してください。` };
+    if (!isString(entry.name) || !entry.name.trim())
+      return { data: null, error: `devices[${index}].name は文字列で指定してください。` };
+    if (!isNumber(entry.recommendedW))
+      return { data: null, error: `devices[${index}].recommendedW は数値で指定してください。` };
+    if (!isNumber(entry.maxW)) return { data: null, error: `devices[${index}].maxW は数値で指定してください。` };
+    if (!isNumber(entry.maxV)) return { data: null, error: `devices[${index}].maxV は数値で指定してください。` };
+
+    const standards = readStandards(entry.standards, `devices[${index}].standards`);
+    if (typeof standards === "string") return { data: null, error: standards };
+
+    const maxA = readOptionalNumber(entry.maxA, `devices[${index}].maxA`);
+    if (typeof maxA === "string") return { data: null, error: maxA };
+    const batteryWh = readOptionalNumber(entry.batteryWh, `devices[${index}].batteryWh`);
+    if (typeof batteryWh === "string") return { data: null, error: batteryWh };
+    const batteryMAh = readOptionalNumber(entry.batteryMAh, `devices[${index}].batteryMAh`);
+    if (typeof batteryMAh === "string") return { data: null, error: batteryMAh };
+    const nominalV = readOptionalNumber(entry.nominalV, `devices[${index}].nominalV`);
+    if (typeof nominalV === "string") return { data: null, error: nominalV };
+
+    if (entry.notes !== undefined && !isString(entry.notes))
+      return { data: null, error: `devices[${index}].notes は文字列で指定してください。` };
+
+    devices.push({
+      name: entry.name.trim(),
+      recommendedW: entry.recommendedW,
+      maxW: entry.maxW,
+      maxV: entry.maxV,
+      maxA,
+      batteryWh,
+      batteryMAh,
+      nominalV,
+      standards,
+      notes: entry.notes,
+    });
+  }
+
+  return { data: { adapters, cables, devices }, error: null };
+}
+
 // ---------- Main App
 
 export default function App() {
@@ -628,17 +479,29 @@ export default function App() {
   const [cableCustom, setCableCustom] = useState<Partial<CableSpec>>({});
   const [deviceCustom, setDeviceCustom] = useState<Partial<DeviceSpec>>({});
 
+  const [extraAdapters, setExtraAdapters] = useState<AdapterSpec[]>([]);
+  const [extraCables, setExtraCables] = useState<CableSpec[]>([]);
+  const [extraDevices, setExtraDevices] = useState<DeviceSpec[]>([]);
+
+  const [presetImportText, setPresetImportText] = useState<string>("");
+  const [presetImportError, setPresetImportError] = useState<string | null>(null);
+  const [presetImportSuccess, setPresetImportSuccess] = useState<string | null>(null);
+
+  const adapters = useMemo(() => [...ADAPTERS, ...extraAdapters], [extraAdapters]);
+  const cables = useMemo(() => [...CABLES, ...extraCables], [extraCables]);
+  const devices = useMemo(() => [...DEVICES, ...extraDevices], [extraDevices]);
+
   const adapter = useMemo<AdapterSpec>(
-    () => ({ ...ADAPTERS[adapterIdx], ...adapterCustom, name: ADAPTERS[adapterIdx].name }),
-    [adapterIdx, adapterCustom]
+    () => ({ ...adapters[adapterIdx], ...adapterCustom, name: adapters[adapterIdx].name }),
+    [adapterIdx, adapterCustom, adapters]
   );
   const cable = useMemo<CableSpec>(
-    () => ({ ...CABLES[cableIdx], ...cableCustom, name: CABLES[cableIdx].name }),
-    [cableIdx, cableCustom]
+    () => ({ ...cables[cableIdx], ...cableCustom, name: cables[cableIdx].name }),
+    [cableIdx, cableCustom, cables]
   );
   const device = useMemo<DeviceSpec>(
-    () => ({ ...DEVICES[deviceIdx], ...deviceCustom, name: DEVICES[deviceIdx].name }),
-    [deviceIdx, deviceCustom]
+    () => ({ ...devices[deviceIdx], ...deviceCustom, name: devices[deviceIdx].name }),
+    [deviceIdx, deviceCustom, devices]
   );
 
   const negotiation = useMemo(
@@ -728,6 +591,31 @@ export default function App() {
     setDeviceCustom({});
   };
 
+  const handlePresetImport = () => {
+    const { data, error } = parsePresetPayload(presetImportText);
+    if (error || !data) {
+      setPresetImportError(error ?? "不明なエラーが発生しました。");
+      setPresetImportSuccess(null);
+      return;
+    }
+
+    const total = data.adapters.length + data.cables.length + data.devices.length;
+    if (total === 0) {
+      setPresetImportError("追加対象がありません。adapters/cables/devices のいずれかを指定してください。");
+      setPresetImportSuccess(null);
+      return;
+    }
+
+    setExtraAdapters((prev) => [...prev, ...data.adapters]);
+    setExtraCables((prev) => [...prev, ...data.cables]);
+    setExtraDevices((prev) => [...prev, ...data.devices]);
+    setPresetImportError(null);
+    setPresetImportSuccess(
+      `追加しました: アダプタ ${data.adapters.length}件 / ケーブル ${data.cables.length}件 / 端末 ${data.devices.length}件`
+    );
+    setPresetImportText("");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
@@ -755,7 +643,7 @@ export default function App() {
           <SectionCard title="電源アダプタ">
             <Field label="プリセット">
               <Select value={String(adapterIdx)} onChange={(v) => setAdapterIdx(Number(v))}>
-                {ADAPTERS.map((a, i) => (
+                {adapters.map((a, i) => (
                   <option key={a.name} value={String(i)}>
                     {a.name}
                   </option>
@@ -800,7 +688,7 @@ export default function App() {
                       variant={enabled ? "default" : "outline"}
                       onClick={() => {
                         setAdapterCustom((c) => {
-                          const base = c.standards ?? ADAPTERS[adapterIdx].standards;
+                          const base = c.standards ?? adapters[adapterIdx].standards;
                           const set = new Set(base);
                           if (set.has(s)) set.delete(s);
                           else set.add(s);
@@ -820,7 +708,7 @@ export default function App() {
           <SectionCard title="充電ケーブル">
             <Field label="プリセット">
               <Select value={String(cableIdx)} onChange={(v) => setCableIdx(Number(v))}>
-                {CABLES.map((c, i) => (
+                {cables.map((c, i) => (
                   <option key={c.name} value={String(i)}>
                     {c.name}
                   </option>
@@ -857,7 +745,7 @@ export default function App() {
           <SectionCard title="充電対象の端末">
             <Field label="プリセット">
               <Select value={String(deviceIdx)} onChange={(v) => setDeviceIdx(Number(v))}>
-                {DEVICES.map((d, i) => (
+                {devices.map((d, i) => (
                   <option key={`${d.name}-${i}`} value={String(i)}>
                     {d.name}
                   </option>
@@ -929,7 +817,7 @@ export default function App() {
                       variant={enabled ? "default" : "outline"}
                       onClick={() => {
                         setDeviceCustom((c) => {
-                          const base = c.standards ?? DEVICES[deviceIdx].standards;
+                          const base = c.standards ?? devices[deviceIdx].standards;
                           const set = new Set(base);
                           if (set.has(s)) set.delete(s);
                           else set.add(s);
@@ -1043,25 +931,58 @@ export default function App() {
 
         {showAdvanced && (
           <div className="mt-6">
-            <SectionCard title="詳細設定">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm">規格の優先順位</Label>
-                  <p className="text-xs text-slate-500 mb-3">自動選択時に上から順に優先されます (固定値・UIのみ)。</p>
-                  <div className="flex flex-wrap gap-2">
-                    {STANDARD_PRIORITY.map((s) => (
-                      <Badge key={s} variant="outline">
-                        {s}
-                      </Badge>
-                    ))}
+            <div className="space-y-4">
+              <SectionCard title="詳細設定">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm">規格の優先順位</Label>
+                    <p className="text-xs text-slate-500 mb-3">自動選択時に上から順に優先されます (固定値・UIのみ)。</p>
+                    <div className="flex flex-wrap gap-2">
+                      {STANDARD_PRIORITY.map((s) => (
+                        <Badge key={s} variant="outline">
+                          {s}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm">推定モデル</Label>
+                    <p className="text-xs text-slate-500">20%→80%は単純化したテーパリングを考慮した概算です。</p>
                   </div>
                 </div>
-                <div>
-                  <Label className="text-sm">推定モデル</Label>
-                  <p className="text-xs text-slate-500">20%→80%は単純化したテーパリングを考慮した概算です。</p>
+              </SectionCard>
+
+              <SectionCard title="プリセット追加 (JSON)">
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm">JSON を貼り付けて追加</Label>
+                    <p className="text-xs text-slate-500 mt-1">
+                      adapters / cables / devices を配列で指定します。空の配列は省略できます。
+                    </p>
+                  </div>
+                  <Textarea
+                    rows={9}
+                    placeholder={`{\n  \"adapters\": [\n    {\n      \"name\": \"My 65W Adapter\",\n      \"maxW\": 65,\n      \"maxV\": 20,\n      \"standards\": [\"USB PD 3.0/2.0\"]\n    }\n  ],\n  \"cables\": [\n    {\n      \"name\": \"My USB-C Cable\",\n      \"connector\": \"USB-C to USB-C\",\n      \"maxA\": 5,\n      \"maxV\": 20\n    }\n  ],\n  \"devices\": [\n    {\n      \"name\": \"My Phone\",\n      \"recommendedW\": 27,\n      \"maxW\": 30,\n      \"maxV\": 11,\n      \"standards\": [\"USB PD 3.0/2.0\", \"USB PD PPS\"]\n    }\n  ]\n}`}
+                    value={presetImportText}
+                    onChange={(e) => setPresetImportText(e.target.value)}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button onClick={handlePresetImport}>追加する</Button>
+                    <span className="text-xs text-slate-500">
+                      追加後はプリセット一覧の末尾に追記されます。
+                    </span>
+                  </div>
+                  {presetImportError && (
+                    <Alert variant="destructive" title="読み込みエラー">
+                      {presetImportError}
+                    </Alert>
+                  )}
+                  {presetImportSuccess && (
+                    <Alert title="読み込み完了">{presetImportSuccess}</Alert>
+                  )}
                 </div>
-              </div>
-            </SectionCard>
+              </SectionCard>
+            </div>
           </div>
         )}
 

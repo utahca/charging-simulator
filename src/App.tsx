@@ -15,6 +15,7 @@ import type {
   CableSpec,
   DeviceSpec,
   MessageDescriptor,
+  MessageKey,
   SimulationResult,
   Standard,
 } from "./types";
@@ -39,7 +40,6 @@ type StandardCompatibility = {
 };
 
 type Language = "en" | "ja";
-type MessageKey = keyof typeof en;
 const translations = { en, ja } satisfies Record<Language, Record<MessageKey, string>>;
 
 const formatMessage = (template: string, values?: Record<string, number | string>) => {
@@ -274,7 +274,7 @@ export default function App() {
             {t("appSubtitle")}
           </p>
           <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-xs text-slate-300">
-            <Label className="text-xs font-medium text-slate-300">{t("languageLabel")}</Label>
+            <span className="text-xs font-medium text-slate-300">{t("languageLabel")}</span>
             <Select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
               <option value="en">English</option>
               <option value="ja">日本語</option>

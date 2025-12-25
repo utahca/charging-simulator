@@ -14,6 +14,8 @@ export type CableConnector =
   | "USB-A to Lightning";
 export type DeviceConnector = "USB-C" | "Lightning";
 
+export type MessageKey = keyof typeof import("./i18n/en").default;
+
 export interface AdapterSpec {
   name: string;
   maxW: number;
@@ -46,7 +48,7 @@ export interface DeviceSpec {
 }
 
 export type MessageDescriptor = {
-  key: string;
+  key: MessageKey;
   values?: Record<string, number | string>;
 };
 

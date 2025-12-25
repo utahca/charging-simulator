@@ -10,6 +10,7 @@ export type AdapterPort = "USB-C" | "USB-A";
 export type CableConnector =
   | "USB-C to USB-C"
   | "USB-A to USB-C"
+  | "USB-C to USB-A"
   | "USB-C to Lightning"
   | "USB-A to Lightning";
 export type DeviceConnector = "USB-C" | "Lightning";
@@ -18,6 +19,7 @@ export type MessageKey = keyof typeof import("./i18n/en").default;
 
 export interface AdapterSpec {
   name: string;
+  brand: string;
   maxW: number;
   maxV: number;
   maxA: number;
@@ -28,6 +30,7 @@ export interface AdapterSpec {
 
 export interface CableSpec {
   name: string;
+  brand: string;
   maxW: number;
   maxV: number;
   maxA: number;
@@ -38,6 +41,7 @@ export interface CableSpec {
 
 export interface DeviceSpec {
   name: string;
+  brand: string;
   recommendedW: number;
   maxV: number;
   maxA: number;

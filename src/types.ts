@@ -45,6 +45,11 @@ export interface DeviceSpec {
   notes?: string;
 }
 
+export type MessageDescriptor = {
+  key: string;
+  values?: Record<string, number | string>;
+};
+
 export interface SimulationResult {
   standard: Standard;
   estimatedW: number;
@@ -52,7 +57,7 @@ export interface SimulationResult {
   estimatedA: number;
   meetsRecommended: boolean;
   estimatedTimeHours: number;
-  bottlenecks: string[];
-  nextActions: string[];
-  incompatibilities: string[];
+  bottlenecks: MessageDescriptor[];
+  nextActions: MessageDescriptor[];
+  incompatibilities: MessageDescriptor[];
 }
